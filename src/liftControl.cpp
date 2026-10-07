@@ -13,7 +13,7 @@ static double kP = 0.3;
 static double targetPosition = 0;
 
 // Encoder value where the lift stops going down, tune once homing works
-static const double DOWN_LIMIT = 3;
+static const double DOWN_LIMIT = -3;
 
 // Full PID constants used only during autonomous, tune these separately
 // from kG and kP above since precise positioning needs different gains
@@ -22,7 +22,7 @@ static double kI_auton = 0.0;
 static double kD_auton = 0.02;
 
 // How close counts as arrived, in encoder degrees
-static const double ARRIVED_TOLERANCE = 10;
+static const double ARRIVED_TOLERANCE = 5;
 
 // Preset heights in encoder degrees, edit these to match your actual lift
 // Index 0 is the bottom, add or remove entries as needed
@@ -33,7 +33,7 @@ void homeLift() {
     // gentle power, not full 127, so it does not slam the hard stop
     liftLeft.move(-40);
     liftRight.move(-40);
-
+pros::delay(300);
     int stableCount = 0;
     while (stableCount < 10) {
         double velocity = liftLeft.get_actual_velocity();
@@ -64,16 +64,16 @@ void handleLift() {
 
     if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
         // held, run up at full power, no correction applied
-        liftLeft.move(60);
-        liftRight.move(60);
+        liftLeft.move(90);
+        liftRight.move(90);
         targetPosition = (liftLeft.get_position() + liftRight.get_position()) / 2.0;
     }
     else if (controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
         double current = (liftLeft.get_position() + liftRight.get_position()) / 2.0;
 
         if (current > DOWN_LIMIT) {
-            liftLeft.move(-60);
-            liftRight.move(-60);
+            liftLeft.move(-90);
+            liftRight.move(-90);
         } else {
             liftLeft.brake();
             liftRight.brake();
@@ -86,8 +86,8 @@ void handleLift() {
         double error = targetPosition - current;
         double output = kG + (kP * error);
 
-        if (output > 60) output = 60;
-        if (output < -60) output = -60;
+        if (output > 90) output = 90;
+        if (output < -90) output = -90;
 
         liftLeft.move(output);
         liftRight.move(output);

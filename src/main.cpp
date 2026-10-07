@@ -37,8 +37,6 @@ void initialize() {
 	wing.set_value(LOW);
 	lcd::initialize();
 	chassis.calibrate();
-    Lift.set_brake_mode_all(pros::E_MOTOR_BRAKE_COAST);
-    homeLift();
 	pros::lcd::set_text_align(pros::lcd::Text_Align::CENTER);
 	// Show current route on brain screen
 	competitionSelector.displaySelectionBrain();
@@ -194,12 +192,12 @@ void handleIntake()
 void handleLift()
 {
     if(controller.get_digital(pros::E_CONTROLLER_DIGITAL_R1)){
-        liftLeft.move_velocity(127);
-        liftRight.move_velocity(127);
+        liftLeft.move_velocity(100);
+        liftRight.move_velocity(100);
     }
     else if(controller.get_digital(pros::E_CONTROLLER_DIGITAL_R2)){
-        liftLeft.move_velocity(-127);
-        liftRight.move_velocity(-127);
+        liftLeft.move_velocity(-100);
+        liftRight.move_velocity(-100);
     }
     else{
         liftLeft.brake();
@@ -222,9 +220,9 @@ void handleWing(){
 		wing.set_value(!wing.get_value());
 	}
 }
-void handleLoader(){
+void handleClamp(){
 	if(controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_RIGHT)){
-		loader.set_value(!loader.get_value());
+		clamp.set_value(!clamp.get_value());
 	}
 }
 /**
@@ -261,8 +259,8 @@ void opcontrol() {
 		/*handleHood();
 		handleMidDescore();
 		handleWing();
-		handleIntake();
-        handleLoader();*/
+		handleIntake();*/
+        handleClamp();
         handleLift();
 		pros::delay(20);                               // Run for 20 ms then update
     }

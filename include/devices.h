@@ -41,7 +41,7 @@ extern Distance* backDistancePtr;
 extern Optical colorSens;
 // Phnematic Declerations
 extern adi::Port hood;
-extern adi::Port loader;
+extern adi::Port clamp;
 extern adi::Port wing;
 extern adi::Port midDescore;
 extern adi::DigitalIn autonLimitSwitch;

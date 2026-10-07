@@ -18,11 +18,11 @@ using namespace lemlib;
 
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 // Motor Declerations and Port Configurations
-pros::MotorGroup right_motors({-7, -6, 4}, pros::MotorGearset::blue);
+pros::MotorGroup right_motors({7, 6, 4}, pros::MotorGearset::blue);
 pros::MotorGroup left_motors({-9, -8, -5}, pros::MotorGearset::blue);
 pros::MotorGroup all_motors({8, -5, -9, 4, -6, 7}, pros::MotorGearset::blue);
-pros::Motor liftLeft{10, pros::MotorGearset::green};
-pros::Motor liftRight{-20, pros::MotorGearset::green};
+pros::Motor liftLeft{-20, pros::MotorGearset::green};
+pros::Motor liftRight{10, pros::MotorGearset::green};
 pros::MotorGroup Lift({10, -20}, pros::MotorGearset::green);
 pros::Motor bottomStage{16, pros::MotorGearset::blue};
 pros::Motor topStage{2, pros::MotorGearset::green};
@@ -40,7 +40,7 @@ pros::Distance backDistance(17);
 Distance* backDistancePtr = &backDistance;
 // Phnematic Declerations and Configurations
 adi::Port hood('B', E_ADI_DIGITAL_OUT);
-adi::Port loader('C', E_ADI_DIGITAL_OUT);
+adi::Port clamp('C', E_ADI_DIGITAL_OUT);
 adi::Port wing('H', E_ADI_DIGITAL_OUT);
 adi::Port midDescore('A', E_ADI_DIGITAL_OUT);
 adi::DigitalIn autonLimitSwitch('G');

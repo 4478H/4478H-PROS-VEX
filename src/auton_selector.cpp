@@ -15,7 +15,7 @@ bool red = false;
 
 // Constructor
 AutonSelector::AutonSelector(const AutonRoutine* routinesArray, size_t routineCount, bool combineTesting, const AutonRoutine* extraRoutinesArray, size_t extraCount) {
-    currentSelection =2;  // Initialize to first selection
+    currentSelection =3;  // Initialize to first selection
 
     // Add main routines
     for (size_t i = 0; i < routineCount; i++) {
@@ -82,7 +82,7 @@ int AutonSelector::getRoutineCount() const {
 const AutonRoutine COMPETITION_ROUTINES[] = {                        
     {"Left 7 Ball Push", left7Push, 1},
     {"Right 7 Ball Push", right7Push, 1},
-    {"Full AWP RIGHT SIDE", soloTap,1},
+    {"Full AWP RIGHT SIDE", fullAWPLeft,1},
     {"Odom AWP Right", odomAWPHigh,1},
     {"skills", skills,1},
     {"PID Testing", PIDTesting,1},
