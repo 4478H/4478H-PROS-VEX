@@ -25,6 +25,13 @@ extern double drive_kD;
 // fwdVal: target distance (or degrees for turn)
 // maxSpeedPercent: optional speed cap in percent (0-100). Default 100 = full power (127)
 extern void drivePID(double, double maxSpeedPercent = 100.0, double timeout = 3000);
+// Override helpers
+extern void grabPin();
+extern void releasePin();
+// backupDist: inches to back up into the Toggle
+extern void setToggle(double backupDist = 6);
+// preset: lift height from liftControl.cpp, approachDist: inches to drive in over the Goal
+extern void placePin(int preset, double approachDist = 6);
 extern void turnToHeadingSmart(float theta, int timeout, lemlib::TurnToHeadingParams params = {}, bool async = true);
 
 

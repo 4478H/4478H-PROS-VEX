@@ -35,6 +35,7 @@ void onCenter_button()
 }
 void initialize() {
 	wing.set_value(LOW);
+	clamp.set_value(LOW); // start with the clamp open
 	lcd::initialize();
 	chassis.calibrate();
 	pros::lcd::set_text_align(pros::lcd::Text_Align::CENTER);

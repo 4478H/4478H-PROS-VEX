@@ -1,6 +1,7 @@
 #include "liftControl.h"
 #include "devices.h"
 #include <cmath>
+#include <atomic>
 
 using namespace pros;
 
@@ -26,8 +27,12 @@ static const double ARRIVED_TOLERANCE = 5;
 
 // Preset heights in encoder degrees, edit these to match your actual lift
 // Index 0 is the bottom, add or remove entries as needed
-static const double LIFT_PRESETS[] = {0, 300, 600, 900};
+static const double LIFT_PRESETS[] = {0, 350, 500, 700};
 static const int LIFT_PRESET_COUNT = 4;
+
+// Bumped every time a new auton lift move starts, a running move quits
+// as soon as it sees a newer one so two moves never fight over the motors
+static std::atomic<int> liftMoveId{0};
 
 void homeLift() {
     // gentle power, not full 127, so it does not slam the hard stop
@@ -95,11 +100,18 @@ void handleLift() {
 }
 
 void liftToPosition(double target, int timeoutMs, int maxSpeed) {
+    int myId = ++liftMoveId;
     double integral = 0;
     double prevError = 0;
     uint32_t startTime = pros::millis();
 
     while (pros::millis() - startTime < (uint32_t)timeoutMs) {
+        // a newer lift move took over, let it have the motors
+        if (myId != liftMoveId) {
+            return;
+        }
+
+
         double current = (liftLeft.get_position() + liftRight.get_position()) / 2.0;
         double error = target - current;
 
@@ -127,11 +139,20 @@ void liftToPosition(double target, int timeoutMs, int maxSpeed) {
     targetPosition = target;
 }
 
-void liftToPreset(int preset, int timeoutMs, int maxSpeed) {
+void liftToPreset(int preset, bool waitUntilDone, int timeoutMs, int maxSpeed) {
     if (preset < 0 || preset >= LIFT_PRESET_COUNT) {
         // invalid preset number, ignore the call rather than crash
         return;
     }
 
-    liftToPosition(LIFT_PRESETS[preset], timeoutMs, maxSpeed);
+    double target = LIFT_PRESETS[preset];
+
+    if (waitUntilDone) {
+        liftToPosition(target, timeoutMs, maxSpeed);
+    } else {
+        // run the move in its own task so the next lines of the route start right away
+        pros::Task([target, timeoutMs, maxSpeed]() {
+            liftToPosition(target, timeoutMs, maxSpeed);
+        });
+    }
 }

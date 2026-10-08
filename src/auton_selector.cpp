@@ -15,7 +15,7 @@ bool red = false;
 
 // Constructor
 AutonSelector::AutonSelector(const AutonRoutine* routinesArray, size_t routineCount, bool combineTesting, const AutonRoutine* extraRoutinesArray, size_t extraCount) {
-    currentSelection =3;  // Initialize to first selection
+    currentSelection =1;  // Initialize to first selection
 
     // Add main routines
     for (size_t i = 0; i < routineCount; i++) {
@@ -80,13 +80,18 @@ int AutonSelector::getRoutineCount() const {
 
 // Global object definitions
 const AutonRoutine COMPETITION_ROUTINES[] = {                        
-    {"Left 7 Ball Push", left7Push, 1},
-    {"Right 7 Ball Push", right7Push, 1},
-    {"Full AWP RIGHT SIDE", fullAWPLeft,1},
-    {"Odom AWP Right", odomAWPHigh,1},
-    {"skills", skills,1},
-    {"PID Testing", PIDTesting,1},
-    {"skillsNew", skillsNew,1}
+    // Q1 = start on your Alliance Station wall, Q2 = start on the side wall
+    // Red and blue use the same routes
+    {"Red Loader Side", redLoaderSideOneGoal, 1},
+    {"Loader Side 2 Goal", loaderSide2Goal, 1},
+    {"Q1 Toggle + Preload", togglePreload, 1},
+    {"Q2 Toggle + Preload", togglePreload, -1},
+    {"Q1 Preload + Stack", togglePreloadStack, 1},
+    {"Q2 Preload + Stack", togglePreloadStack, -1},
+    // only one robot per Alliance can run AWP Stack, see auton_routes.cpp
+    {"Q1 AWP Stack", awpStack, 1},
+    {"Q2 AWP Stack", awpStack, -1},
+    {"Toggle Only", toggleOnly, 1}
 
 };
 

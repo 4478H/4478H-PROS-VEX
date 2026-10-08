@@ -7,6 +7,7 @@
 #include "devices.h"
 #include "auton_routes.h"
 #include "movement.h"
+#include "liftControl.h"
 #include <string>
 #include <iostream>
 #include <thread>
@@ -141,8 +142,6 @@ void drivePID(double fwdVal, double maxSpeedPercent, double timeout)
     right_motors.tare_position();
     mBackLeft.tare_position();
     mBackRight.tare_position();
-    mFrontLeft.tare_position();
-    mFrontRight.tare_position();
     mMidLeft.tare_position();
     mMidRight.tare_position();
 
@@ -170,15 +169,14 @@ void drivePID(double fwdVal, double maxSpeedPercent, double timeout)
     
     while (inGoal < goalsNeeded)
     {
-        // Use the MEDIAN of all 6 drivetrain motor positions for robustness
-        double positions[6] = {
-            mBackLeft.get_position(), mFrontLeft.get_position(), mMidLeft.get_position(),
-            mBackRight.get_position(), mFrontRight.get_position(), mMidRight.get_position()
+        // Use the MEDIAN of all 4 drivetrain motor positions for robustness
+        double positions[4] = {
+            mBackLeft.get_position(), mMidLeft.get_position(),
+            mBackRight.get_position(), mMidRight.get_position()
         };
-        // partial sort to find middle two for even count (6): indices 2 and 3 after nth_element passes
-        std::nth_element(positions, positions + 2, positions + 6);
-        std::nth_element(positions + 3, positions + 3, positions + 6);
-        double medianPos = (positions[2] + positions[3]) / 2.0;
+        // sort to find middle two for even count (4): indices 1 and 2
+        std::sort(positions, positions + 4);
+        double medianPos = (positions[1] + positions[2]) / 2.0;
         double processVariable = medianPos * 360;
         
         error = target - processVariable;
@@ -283,33 +281,46 @@ void turnToHeadingSmart(float theta, int timeout, TurnToHeadingParams params, bo
     chassis.turnToHeading(theta, timeout, params, async);
 }
 
-void descore(){
-    chassis.setPose(-47.129,-47.129,chassis.getPose().theta);
-    delay(100);
-    wing.set_value(LOW);
-    chassis.moveToPose(-32.272,-36.449,90,1000,{.forwards=true, .lead=.1},false);
-    
-    chassis.turnToHeading(90,400,{},false);
+// ---------------- Override helpers ----------------
+extern bool red; // Declared in auton_selector.cpp
 
-    drivePID(25,100,2000);
-    turnToHeadingSmart(85,500); 
-    left_motors.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
-    right_motors.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
-    left_motors.brake();
-    right_motors.brake();
+// Clamp is open when HIGH and closed when LOW
+// TUNE: how long the piston needs to fully open or close
+const int CLAMP_DELAY = 150;
+void grabPin(){
+    clamp.set_value(LOW);
+    pros::delay(CLAMP_DELAY);
 }
-void descoreLeft(){
-    chassis.setPose(-29.548,47.129,chassis.getPose().theta);
-    delay(100);
-    wing.set_value(LOW);
-    chassis.moveToPose(-23.227,58.023,90,1000,{.forwards=true, .lead=.1},false);
-    
-    chassis.turnToHeading(90,400,{},false);
+void releasePin(){
+    clamp.set_value(HIGH);
+    pros::delay(CLAMP_DELAY);
+}
 
-    drivePID(32,100,2000);
-    turnToHeadingSmart(85,500); 
-    left_motors.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
-    right_motors.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
-    left_motors.brake();
-    right_motors.brake();
+// How many times the back roller has to bump the Toggle to reach each color
+// TUNE: depends on which color the Toggle starts on and which way the roller turns it
+const int TOGGLE_PRESSES_RED = 1;
+const int TOGGLE_PRESSES_BLUE = 1;
+
+// Back the roller into the Toggle to set it to our Alliance color,
+// then pull away since a Toggle only counts when no Robot is touching it
+void setToggle(double backupDist){
+    int presses = red ? TOGGLE_PRESSES_RED : TOGGLE_PRESSES_BLUE;
+    for(int p = 0; p < presses; p++){
+        drivePID(-backupDist, 40, 1000);
+        pros::delay(150);
+        drivePID(backupDist, 100, 1000);
+    }
+}
+
+// Raise the lift to a preset, drive the Pin over the Goal, drop it,
+// back away, then lower the lift
+void placePin(int preset, double approachDist){
+    liftToPreset(preset, true, 1500, 127);
+    Lift.set_brake_mode_all(E_MOTOR_BRAKE_HOLD);
+    Lift.brake();
+    drivePID(approachDist, 60, 1500);
+    releasePin();
+    drivePID(-approachDist, 100, 1500);
+    // lower in the background so the robot can head to the next target right away
+    liftToPreset(0, false, 1500, 127);
 }

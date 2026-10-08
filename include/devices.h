@@ -28,10 +28,8 @@ extern Motor liftLeft;
 extern Motor liftRight;
 extern MotorGroup Lift;
 extern MotorGroup intake;
-extern Motor mFrontLeft;
 extern Motor mBackLeft;
 extern Motor mMidLeft;
-extern Motor mFrontRight;
 extern Motor mBackRight;
 extern Motor mMidRight;
 // Sensor Declerations

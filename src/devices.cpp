@@ -18,23 +18,21 @@ using namespace lemlib;
 
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 // Motor Declerations and Port Configurations
-pros::MotorGroup right_motors({7, 6, 4}, pros::MotorGearset::blue);
-pros::MotorGroup left_motors({-9, -8, -5}, pros::MotorGearset::blue);
-pros::MotorGroup all_motors({8, -5, -9, 4, -6, 7}, pros::MotorGearset::blue);
+pros::MotorGroup right_motors({7, 6}, pros::MotorGearset::blue);
+pros::MotorGroup left_motors({-9, -8}, pros::MotorGearset::blue);
+pros::MotorGroup all_motors({-8, -9, 6, 7}, pros::MotorGearset::blue);
 pros::Motor liftLeft{-20, pros::MotorGearset::green};
 pros::Motor liftRight{10, pros::MotorGearset::green};
 pros::MotorGroup Lift({10, -20}, pros::MotorGearset::green);
 pros::Motor bottomStage{16, pros::MotorGearset::blue};
 pros::Motor topStage{2, pros::MotorGearset::green};
 pros::MotorGroup intake({16, 2});
-pros::Motor mFrontLeft(-5, pros::MotorGearset::blue);
 pros::Motor mBackLeft(-9, pros::MotorGearset::blue);
 pros::Motor mMidLeft(-8, pros::MotorGearset::blue);
-pros::Motor mFrontRight(4, pros::MotorGearset::blue);
 pros::Motor mBackRight(7, pros::MotorGearset::blue);
 pros::Motor mMidRight(6, pros::MotorGearset::blue);
 // Sensor Declerations and Configurations
-pros::Imu imu(1);
+pros::Imu imu(18);
 pros::Optical colorSens(8);
 pros::Distance backDistance(17); 
 Distance* backDistancePtr = &backDistance;

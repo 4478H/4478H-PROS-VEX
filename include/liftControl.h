@@ -18,6 +18,8 @@ extern void liftToPosition(double target, int timeoutMs = 2000, int maxSpeed = 1
 
 // Moves to a preset height by number, edit the actual values in liftControl.cpp
 // preset 0 is the bottom, higher numbers go up from there
-extern void liftToPreset(int preset, int timeoutMs = 2000, int maxSpeed = 127);
+// waitUntilDone true = wait for the lift before running the next line
+// waitUntilDone false = start the lift and keep going while it moves
+extern void liftToPreset(int preset, bool waitUntilDone = true, int timeoutMs = 2000, int maxSpeed = 127);
 
 #endif
