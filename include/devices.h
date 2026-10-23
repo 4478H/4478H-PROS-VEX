@@ -46,6 +46,8 @@ extern adi::DigitalIn autonLimitSwitch;
 
 extern lemlib::TrackingWheel left_tracking_wheel;
 extern lemlib::TrackingWheel right_tracking_wheel;
+extern pros::Rotation horizontal_rotation;
+extern lemlib::TrackingWheel horizontal_tracking_wheel;
 extern lemlib::Drivetrain drivetrain;
 extern OdomSensors sensors;
 extern ControllerSettings lateral_controller;

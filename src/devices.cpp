@@ -48,7 +48,7 @@ adi::DigitalIn autonLimitSwitch('G');
 // drivetrain settings
 Drivetrain drivetrain(&left_motors,  // left motor group
   &right_motors, // right motor group
-  11.375,          // 11 inch track width
+  11,          // 11 inch track width
   3.25,          // using new 2.75" omnis
   360,           // drivetrain rpm is 360
   1.5            // horizontal drift is 8 (center traction wheel drivebase)
@@ -57,15 +57,19 @@ Drivetrain drivetrain(&left_motors,  // left motor group
 lemlib::TrackingWheel left_tracking_wheel(&left_motors, drivetrain.wheelDiameter, -drivetrain.trackWidth / 2.0f, drivetrain.rpm);
 lemlib::TrackingWheel right_tracking_wheel(&right_motors, drivetrain.wheelDiameter, drivetrain.trackWidth / 2.0f, drivetrain.rpm);
 
+
+pros::Rotation horizontal_rotation(13);
+lemlib::TrackingWheel horizontal_tracking_wheel(&horizontal_rotation, lemlib::Omniwheel::NEW_2, -4);
+
 OdomSensors sensors(&left_tracking_wheel,  // vertical tracking wheel 1 (left drive)
                     &right_tracking_wheel, // vertical tracking wheel 2 (right drive)
-                    nullptr,               // horizontal tracking wheel 1
+                    &horizontal_tracking_wheel, // horizontal tracking wheel 1
                     nullptr,               // horizontal tracking wheel 2
                     &imu                   // inertial sensor
 );
 
 // lateral PID controller
-ControllerSettings lateral_controller(10,  // proportional gain (kP)
+ControllerSettings lateral_controller(11,  // proportional gain (kP)
                                       0,   // integral gain (kI)
                                       3,   // derivative gain (kD)
                                       3,   // anti windup
@@ -77,9 +81,9 @@ ControllerSettings lateral_controller(10,  // proportional gain (kP)
 );
 
 // angular PID controller
-ControllerSettings angular_controller(2.75, // proportional gain (kP)
+ControllerSettings angular_controller(3.5, // proportional gain (kP)
                                       0, // integral gain (kI)
-                                      19.5,  // derivative gain (kD)
+                                      19.2,  // derivative gain (kD)
                                       5,   // anti windup
                                       0.1, // small error range, in inches
                                       250, // small error range timeout, in milliseconds

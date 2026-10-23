@@ -22,4 +22,8 @@ extern void liftToPosition(double target, int timeoutMs = 2000, int maxSpeed = 1
 // waitUntilDone false = start the lift and keep going while it moves
 extern void liftToPreset(int preset, bool waitUntilDone = true, int timeoutMs = 2000, int maxSpeed = 127);
 
+
+// Current lift height in encoder degrees, average of both lift motors
+extern double getLiftPosition();
+
 #endif

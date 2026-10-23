@@ -14,7 +14,7 @@ static double kP = 0.3;
 static double targetPosition = 0;
 
 // Encoder value where the lift stops going down, tune once homing works
-static const double DOWN_LIMIT = -3;
+static const double DOWN_LIMIT = -10;
 
 // Full PID constants used only during autonomous, tune these separately
 // from kG and kP above since precise positioning needs different gains
@@ -27,8 +27,8 @@ static const double ARRIVED_TOLERANCE = 5;
 
 // Preset heights in encoder degrees, edit these to match your actual lift
 // Index 0 is the bottom, add or remove entries as needed
-static const double LIFT_PRESETS[] = {0, 350, 500, 700};
-static const int LIFT_PRESET_COUNT = 4;
+static const double LIFT_PRESETS[] = {-5, 150, 350, 650, 850, 1000};
+static const int LIFT_PRESET_COUNT = 6;
 
 // Bumped every time a new auton lift move starts, a running move quits
 // as soon as it sees a newer one so two moves never fight over the motors
@@ -155,4 +155,8 @@ void liftToPreset(int preset, bool waitUntilDone, int timeoutMs, int maxSpeed) {
             liftToPosition(target, timeoutMs, maxSpeed);
         });
     }
+}
+
+double getLiftPosition() {
+    return (liftLeft.get_position() + liftRight.get_position()) / 2.0;
 }

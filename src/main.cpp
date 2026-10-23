@@ -2,20 +2,14 @@
 #include "lemlib/api.hpp" // IWYU pragma: keep
 #include "lemlib/chassis/chassis.hpp"
 #include "devices.h"
-#include "auton_routes.h"
 #include "auton_selector.h"
-#include "movement.h"
 #include "pros/misc.h"
 #include "pros/motors.h"
 #include <cmath>  // For fabs()
-#include "pros/rotation.hpp"
 #include <algorithm>
 #include <cstdlib>
-#include <iostream>
-#include "lemlib/pid.hpp"
 #include "liblvgl/llemu.hpp"
 #include "pros/adi.h"
-#include "colorSort.h"
 #include "liftControl.h"
 using namespace pros;
 using namespace lemlib;
@@ -35,7 +29,7 @@ void onCenter_button()
 }
 void initialize() {
 	wing.set_value(LOW);
-	clamp.set_value(LOW); // start with the clamp open
+	clamp.set_value(HIGH); // start with the clamp open
 	lcd::initialize();
 	chassis.calibrate();
 	pros::lcd::set_text_align(pros::lcd::Text_Align::CENTER);
@@ -136,8 +130,95 @@ double logDriveJoystick(double joystickPCT)
     return joystickPCT >= 0 ? smoothedValue : -smoothedValue;
 }
 
+// Precision mode: press Y to toggle slower, smoother driving for lining up
+bool precisionMode = false;
+const double PRECISION_SPEED_SCALE = 0.4; // Max speed in precision mode (40% of normal)
+const double PRECISION_MAX_ACCEL = 15.0;  // Max rpm change per 20ms loop in precision mode
+
+// Limits how fast a side's velocity can change so the robot doesn't jerk
+double limitAccel(double target, double &previous, double maxStep)
+{
+    double change = std::clamp(target - previous, -maxStep, maxStep);
+    previous += change;
+    return previous;
+}
+
+void handlePrecisionMode()
+{
+    if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
+        precisionMode = !precisionMode;
+        controller.rumble(precisionMode ? "." : "-"); // short = on, long = off
+    }
+}
+
+// Lift limiting: automatically slows and smooths the drive as the lift goes up
+// so the top heavy robot doesn't tip or jerk, set to false to turn it off
+const bool LIFT_LIMIT_ENABLED = true;
+const double LIFT_LIMIT_START = 200;      // Lift height (encoder deg) where limiting starts
+const double LIFT_LIMIT_FULL = 650;       // Lift height where limiting is strongest
+const double LIFT_MIN_SPEED_SCALE = 0.5;  // Max speed at full height (50% of normal)
+const double LIFT_START_ACCEL = 60.0;     // Max rpm change per 20ms loop at start height
+const double LIFT_MIN_ACCEL = 20.0;       // Max rpm change per 20ms loop at full height
+const double LIFT_TURN_SCALE = 0.8;       // Turning strength at full height (60% of normal)
+
+// Press DOWN to toggle lift limiting on and off during a match
+bool liftLimitOn = true;
+
+void handleLiftLimitToggle()
+{
+    if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_DOWN)) {
+        liftLimitOn = !liftLimitOn;
+        controller.rumble(liftLimitOn ? ".." : "--"); // two short = on, two long = off
+    }
+}
+
+// Returns 0 when the lift is low, 1 when it is at full height, and in between as it rises
+double liftLimitAmount()
+{
+    if (!LIFT_LIMIT_ENABLED) return 0;
+    if (!liftLimitOn) return 0;
+    double amount = (getLiftPosition() - LIFT_LIMIT_START) / (LIFT_LIMIT_FULL - LIFT_LIMIT_START);
+    return std::clamp(amount, 0.0, 1.0);
+}
+
+// Softens turning, top speed, and acceleration based on how high the lift is
+void applyLiftLimit(double &left, double &right)
+{
+    static double liftPrevLeft = 0;
+    static double liftPrevRight = 0;
+
+    double t = liftLimitAmount();
+    if (t == 0) {
+        // lift is down, drive normally
+        liftPrevLeft = left;
+        liftPrevRight = right;
+        return;
+    }
+
+    // reduce turning, sharp turns tip the robot sideways
+    double forward = (left + right) / 2.0;
+    double turn = (left - right) / 2.0;
+    turn *= 1 - t * (1 - LIFT_TURN_SCALE);
+    left = forward + turn;
+    right = forward - turn;
+
+    // lower top speed, skipped in precision mode since it is already slow
+    if (!precisionMode) {
+        double speedScale = 1 - t * (1 - LIFT_MIN_SPEED_SCALE);
+        left *= speedScale;
+        right *= speedScale;
+    }
+
+    // ramp speed changes, including stopping, so the weight up top doesn't throw the robot
+    double maxStep = LIFT_START_ACCEL + t * (LIFT_MIN_ACCEL - LIFT_START_ACCEL);
+    left = limitAccel(left, liftPrevLeft, maxStep);
+    right = limitAccel(right, liftPrevRight, maxStep);
+}
+
 void handleDriveTrain()
 {
+    static double prevLeft = 0;
+    static double prevRight = 0;
 
     // get left y and right y positions
     double leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
@@ -153,6 +234,17 @@ void handleDriveTrain()
     // convert to gearset
     leftY *= 6;
     rightY *= 6;
+
+    if (precisionMode) {
+        // scale down top speed and smooth out acceleration
+        leftY = limitAccel(leftY * PRECISION_SPEED_SCALE, prevLeft, PRECISION_MAX_ACCEL);
+        rightY = limitAccel(rightY * PRECISION_SPEED_SCALE, prevRight, PRECISION_MAX_ACCEL);
+    } else {
+        prevLeft = leftY;
+        prevRight = rightY;
+    }
+
+    applyLiftLimit(leftY, rightY);
 
     // skills change
 
@@ -253,9 +345,11 @@ void handleClamp(){
  * task, not resume it from where it left off.
  */
 void opcontrol() {
-    chassis.setBrakeMode(pros::E_MOTOR_BRAKE_COAST);
+    chassis.setBrakeMode(pros::E_MOTOR_BRAKE_BRAKE);
 	chassis.setPose(0, 0, 0);
 	while (true) {
+		handlePrecisionMode();
+		handleLiftLimitToggle();
 		handleDriveTrain();
 		/*handleHood();
 		handleMidDescore();

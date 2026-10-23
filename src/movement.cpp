@@ -117,9 +117,9 @@ double slew(double val, double fwdVal)
 }
 
 // Drive PID gains (made global for monitoring)
-double drive_kP = 0.13; 
+double drive_kP = 0.17; 
 double drive_kI = 0.00; 
-double drive_kD = 0.41;
+double drive_kD = 0.45;
 
 void drivePID(double fwdVal, double maxSpeedPercent, double timeout)
 {
@@ -137,13 +137,12 @@ void drivePID(double fwdVal, double maxSpeedPercent, double timeout)
     double denom = (diameter * pi) * (inputGear / outputGear); // leave this one alone
     double target = (num / denom) * 360;                       // leave this one alone
     
-    // Reset motor positions to zero
-    left_motors.tare_position();
-    right_motors.tare_position();
-    mBackLeft.tare_position();
-    mBackRight.tare_position();
-    mMidLeft.tare_position();
-    mMidRight.tare_position();
+    // Remember where each motor starts instead of taring, LemLib uses these
+    // same encoders for odometry and taring them makes its x and y jump back
+    const double startBackLeft = mBackLeft.get_position();
+    const double startMidLeft = mMidLeft.get_position();
+    const double startBackRight = mBackRight.get_position();
+    const double startMidRight = mMidRight.get_position();
 
     double startTime = pros::millis();
     double error = 0;
@@ -171,8 +170,8 @@ void drivePID(double fwdVal, double maxSpeedPercent, double timeout)
     {
         // Use the MEDIAN of all 4 drivetrain motor positions for robustness
         double positions[4] = {
-            mBackLeft.get_position(), mMidLeft.get_position(),
-            mBackRight.get_position(), mMidRight.get_position()
+            mBackLeft.get_position() - startBackLeft, mMidLeft.get_position() - startMidLeft,
+            mBackRight.get_position() - startBackRight, mMidRight.get_position() - startMidRight
         };
         // sort to find middle two for even count (4): indices 1 and 2
         std::sort(positions, positions + 4);

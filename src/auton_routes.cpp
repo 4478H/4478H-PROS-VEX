@@ -5,6 +5,7 @@
 #include "movement.h"
 #include "opticalAlign.h"
 #include "liftControl.h"
+#include "pros/rtos.hpp"
 #include <cmath>
 
 // ---------------- Override starting positions ----------------
@@ -139,37 +140,89 @@ scoreOn(NEUTRAL_GOAL, NEUTRAL_STACK_PRESET, side);   // passes 20" from the Pins
 
 void redLoaderSideOneGoal(int i){
     chassis.setPose(0,0,0);
-    drivePID(-3, 60, 500);
-    liftToPreset(1, false, 1000, 127);
-    drivePID(16, 100, 1000);
-    chassis.turnToHeading(90, 500);
-    drivePID(15.5, 100, 1000);
+    drivePID(4, 100, 600);
+    drivePID(-7, 100, 600);
+    drivePID(4, 100, 600);
+    drivePID(-7, 100, 600);
+    liftToPreset(3,false, 1000, 127);
+   // drivePID(12, 127, 1500);
+    //chassis.turnToHeading(90, 500);
+    //drivePID(16.3, 100, 1500);
+    chassis.moveToPose(17.8, 14.5, 90 ,1800, {.lead=0.2}, false);
+    drivePID(3.8, 100, 600);
+    liftToPreset(2, true, 400, 80);
+    //pros::delay(250);
     clamp.set_value(LOW);
     pros::delay(250);
-    drivePID(-5, 60, 600);
-    liftToPreset(0, false, 1000, 100);
-    chassis.turnToHeading(150, 500);
-    chassis.moveToPose(4.541, -23.386, 180 ,1500, {.lead=0.8,.maxSpeed = 100}, true);
-    drivePID(2, 20, 500);
+    drivePID(-6, 60, 600);
+    liftToPreset(0, true, 500, 127);
+    chassis.turnToHeading(138, 500);
+    drivePID(13, 50, 1700);
+    chassis.swingToHeading(180, DriveSide::RIGHT, 1300, {}, false);
     clamp.set_value(HIGH);
     pros::delay(250);
-    liftToPreset(2, true, 1000, 80);
-    drivePID(-3, 20, 500);
-    chassis.turnToHeading(0, 500, {.maxSpeed = 40});
-    drivePID(5, 50, 800);
+    liftToPreset(3, false, 1000, 80);
+    chassis.turnToHeading(120, 900);
+    drivePID(12, 100, 500);
+    drivePID(-15, 50, 4000);
+    chassis.turnToHeading(90, 700, {.maxSpeed = 90});
+    drivePID(9.5, 50, 1500);
+    liftToPreset(2, false, 1000, 80);
+    //liftToPreset(1, false, 1000, 80);
     clamp.set_value(LOW);
     pros::delay(250);
-    drivePID(-5, 127, 500);
-    liftToPreset(0, false, 1000, 100);
-    chassis.turnToHeading(90, 500, {}, false);
-    chassis.moveToPose(42.978, 6.38, 30 ,1500, {.lead=0.2,.maxSpeed = 100}, true);
+    drivePID(-6, 100, 500);
+    chassis.turnToHeading(-80, 500);
+   // drivePID(24, 100, 1000);
+   // chassis.turnToHeading(135, 500);
+   // drivePID(90, 100, 1000);
+    /*chassis.moveToPose(42.978, 6.38, 30 ,1500, {.lead=0.2,.maxSpeed = 100}, true);
     drivePID(3, 30, 500);
     clamp.set_value(HIGH);
     pros::delay(250);
-    liftToPreset(3, true, 1000, 40);
+    liftToPreset(4, true, 1000, 40);
     chassis.moveToPose(30.884, 16.005, -90 ,1500, {.lead=0.3,.maxSpeed = 40}, true);
     clamp.set_value(LOW);
-
+*/
+}
+void leftSideOneGoal(int i){
+    chassis.setPose(0,0,0);
+    drivePID(4, 100, 600);
+    drivePID(-7, 100, 600);
+    drivePID(4, 100, 600);
+    drivePID(-7, 100, 600);
+    liftToPreset(2,false, 1000, 127);
+   // drivePID(12, 127, 1500);
+    //chassis.turnToHeading(90, 500);
+    //drivePID(16.3, 100, 1500);
+    chassis.moveToPose(-18.1, 14.8, -90 ,1800, {.lead=0.2}, false);
+    drivePID(3.8, 100, 600);
+    liftToPreset(1, true, 400, 80);
+    //pros::delay(250);
+    clamp.set_value(LOW);
+    pros::delay(250);
+    drivePID(-6, 60, 600);
+    liftToPreset(0, true, 500, 127);
+    chassis.turnToHeading(-140, 500);
+    drivePID(15, 50, 1700);
+    chassis.swingToHeading(180, DriveSide::RIGHT, 1300, {}, false);
+    clamp.set_value(HIGH);
+    pros::delay(250);
+    liftToPreset(3, false, 1000, 80);
+    chassis.turnToHeading(-120, 900);
+    drivePID(12, 100, 500);
+    drivePID(-15, 50, 4000);
+    chassis.turnToHeading(-90, 700, {.maxSpeed = 90});
+    drivePID(9.5, 50, 1500);
+    liftToPreset(2, false, 1000, 80);
+    //liftToPreset(1, false, 1000, 80);
+    clamp.set_value(LOW);
+    pros::delay(250);
+    drivePID(-6, 100, 500);
+    chassis.turnToHeading(-30, 500);
+    drivePID(24, 100, 1000);
+    chassis.turnToHeading(-135, 500);
+    drivePID(90, 100, 1000);
 }
 void loaderSide2Goal(int i){
     chassis.setPose(0,0,0);
@@ -195,7 +248,7 @@ void loaderSide2Goal(int i){
     pros::delay(250);
     drivePID(-5, 127, 500);
     liftToPreset(0, false, 1000, 100);
-    chassis.moveToPose(-23.81, 1.138, 180 ,1500, {false, .lead=0.2,.maxSpeed = 100}, true);
+    chassis.moveToPose(-23.81, 1.138, 180 ,1500, {.forwards = false, .lead = 0.2, .maxSpeed = 100}, true);
     drivePID(4, 20, 500);
     clamp.set_value(HIGH);
     pros::delay(250);
@@ -207,13 +260,13 @@ void loaderSide2Goal(int i){
     pros::delay(250);
     drivePID(-3, 50, 500);
     liftToPreset(0, false, 1000, 127);
-    chassis.moveToPose(-2.214, 1.123, 90 ,1500, {false, .lead=0.2,.maxSpeed = 100}, true);
+    chassis.moveToPose(-2.214, 1.123, 90 ,1500, {.forwards = false, .lead=0.2,.maxSpeed = 100}, true);
 }
 void threecup1goal(int i){
     chassis.setPose(0, 0, 0);
     drivePID(-2, 60, 500);
     liftToPreset(1, false, 1000, 127);
-    chassis.moveToPose(-23.392, -53.723, 0, 3000, {false, .lead = 0.6, .maxSpeed = 100});
+    chassis.moveToPose(-23.392, -53.723, 0, 3000, {.forwards = false, .lead = 0.6, .maxSpeed = 100});
     clamp.set_value(LOW);
     pros::delay(250);
     drivePID(-2, 100, 1000);
@@ -230,7 +283,7 @@ void threecup1goal(int i){
     pros::delay(250);
     drivePID(-2, 90, 500);
     liftToPreset(0, false, 1000);
-    chassis.moveToPose(-36.263, -53.387, 300, 3000, {false, .lead = 0.6, .maxSpeed = 100});
+    chassis.moveToPose(-36.263, -53.387, 300, 3000, {.forwards = false, .lead = 0.6, .maxSpeed = 100});
     drivePID(6, 30, 1000);
     clamp.set_value(HIGH);
     pros::delay(250);
@@ -246,9 +299,158 @@ void threecup1goal(int i){
     clamp.set_value(HIGH);
     pros::delay(250);
     liftToPreset(3, false, 2000, 40);
-    chassis.moveToPose(-23.28, -40.068, 180, 5000, {true, .lead = 0.6, .maxSpeed = 40});
+    chassis.moveToPose(-23.28, -40.068, 180, 5000, {.forwards = true, .lead = 0.6, .maxSpeed = 40});
     clamp.set_value(LOW);
     pros::delay(250);
     drivePID(-3, 10, 500);
     liftToPreset(0, false, 1000, 127);
+}
+void PIDTesting(int i){
+    /*drivePID(24, 80, 2000);
+    pros::delay(5000);
+    chassis.turnToHeading(90, 800);
+    pros::delay(3000);
+    chassis.turnToHeading(180, 500);\
+    */
+    chassis.moveToPose(0, 24, 0, 2000);
+    chassis.moveToPose(24, 24, 90, 2000);
+    pros::delay(5000);
+    chassis.moveToPose(0, 0, -90, 5000);
+
+}
+void left3Pin(int i){
+    chassis.setPose(0,0,0);
+    liftToPreset(3, false, 500, 127);
+    chassis.moveToPose(15.5, 54, 0, 2100, {.lead=0.002, .minSpeed=120}, false);
+    liftToPreset(2, true, 250, 127);
+    clamp.set_value(LOW);
+    pros::delay(250);
+    drivePID(-6, 100, 600);
+    liftToPreset(0, false, 500, 127);
+    chassis.turnToHeading(180, 550);
+    chassis.moveToPose(6.5, 18, 160, 1700,{.lead=0.2, .minSpeed=120}, false);
+    chassis.moveToPose(7, -10, 180, 1400,{.lead=0.002, .minSpeed=120}, false);
+    clamp.set_value(HIGH);
+    pros::delay(300);
+    liftToPosition(5,200, 127);
+    drivePID(-6, 100, 500);
+    chassis.turnToHeading(0, 550);
+    liftToPreset(3, false, 500, 127);
+    chassis.moveToPose(17, 56.5, 0, 2300, {.lead=0.002, .minSpeed=120}, false);
+    pros::delay(300);
+    clamp.set_value(LOW);
+    pros::delay(300);
+    drivePID(-6, 100, 500);
+    liftToPreset(0, false, 500, 127);
+    chassis.turnToHeading(180, 800);
+    chassis.moveToPose(6.5, -11, 180, 2200,{.lead=.002, .minSpeed=120}, false);
+    clamp.set_value(HIGH);
+    pros::delay(250);
+    liftToPosition(5,200, 127);
+    drivePID(-6, 100, 500);
+    chassis.turnToHeading(0, 550);
+    liftToPreset(4, false, 500, 127);
+    chassis.moveToPose(15, 60 , 0, 2300, {.lead=0.002, .minSpeed=120}, false);
+    pros::delay(300);
+    clamp.set_value(LOW);
+    drivePID(-6, 100, 500);
+    liftToPreset(0, false, 500, 127);
+    chassis.turnToHeading(180, 550);
+    chassis.moveToPose(6.5, 5, 180, 1800,{.lead=0.002, .minSpeed=120}, false);
+    chassis.moveToPose(8, -10, 180, 1400,{.lead=0.002, .maxSpeed=90}, false);
+    clamp.set_value(HIGH);
+    pros::delay(250);
+    liftToPosition(5,200, 127);
+    drivePID(-12, 100, 1000);
+    liftToPreset(1, false, 500, 127);
+    chassis.turnToHeading(90, 450);
+    drivePID(28, 100, 2000);
+    clamp.set_value(LOW);
+}
+void left3PinMidRush(int i){
+    chassis.setPose(0,0,0);
+    liftToPreset(3, false, 500, 127);
+    chassis.moveToPose(15.5, 54, 0, 2100, {.lead=0.002, .minSpeed=120}, false);
+    liftToPreset(2, true, 250, 127);
+    clamp.set_value(LOW);
+    pros::delay(250);
+    drivePID(-6, 100, 600);
+    liftToPreset(0, false, 500, 127);
+    chassis.turnToHeading(180, 550);
+    chassis.moveToPose(6.5, 18, 160, 1700,{.lead=0.2, .minSpeed=120}, false);
+    chassis.moveToPose(7, -10, 180, 1400,{.lead=0.002, .minSpeed=120}, false);
+    clamp.set_value(HIGH);
+    pros::delay(300);
+    liftToPosition(8,200, 127);
+    drivePID(-6, 100, 800);
+    chassis.turnToHeading(50, 800);
+    liftToPreset(4, false, 500, 127);
+    chassis.moveToPose(68, 61, 55, 2000, {.lead=0.2, .minSpeed=110}, false);
+    pros::delay(250);
+    clamp.set_value(LOW);
+    pros::delay(250);
+    drivePID(-6, 100, 2000);
+    liftToPreset(0, false, 500, 127);
+    chassis.turnToHeading(-125, 500);
+    chassis.moveToPose(6, -10, 180, 2500,{.lead=0.002, .minSpeed=120}, false);
+    pros::delay(250);
+    clamp.set_value(HIGH);
+    pros::delay(400);
+    drivePID(-6, 100, 800);
+    chassis.turnToHeading(0, 500);
+    liftToPreset(3, false, 500, 127);
+    chassis.moveToPose(16, 55, 0, 2000, {.lead=0.2, .minSpeed=110}, false);
+    pros::delay(250);
+    clamp.set_value(LOW);
+
+}
+// Mirror of left3Pin, every x and heading is flipped
+void right3Pin(int i){
+    chassis.setPose(0,0,0);
+    liftToPreset(3, false, 500, 127);
+    chassis.moveToPose(-15, 52, 0, 2100, {.lead=0.002, .minSpeed=120}, false);
+    liftToPreset(2, true, 250, 127);
+    clamp.set_value(LOW);
+    pros::delay(250);
+    drivePID(-6, 100, 600);
+    liftToPreset(0, false, 500, 127);
+    chassis.turnToHeading(180, 550);
+    chassis.moveToPose(-6.5, 18, -160, 1700,{.lead=0.2, .minSpeed=120}, false);
+    chassis.moveToPose(-6, -18, 180, 1400,{.lead=0.002, .minSpeed=120}, false);
+    clamp.set_value(HIGH);
+    pros::delay(300);
+    liftToPosition(5,200, 127);
+    drivePID(-6, 100, 500);
+    chassis.turnToHeading(0, 550);
+    liftToPreset(3, false, 500, 127);
+    chassis.moveToPose(-15, 56.5, 0, 2300, {.lead=0.002, .minSpeed=120}, false);
+    pros::delay(300);
+    clamp.set_value(LOW);
+    pros::delay(300);
+    drivePID(-6, 100, 500);
+    liftToPreset(0, false, 500, 127);
+    chassis.turnToHeading(180, 800);
+    chassis.moveToPose(-5, -18, 180, 2200,{.lead=.002, .minSpeed=120}, false);
+    clamp.set_value(HIGH);
+    pros::delay(250);
+    liftToPosition(5,200, 127);
+    drivePID(-6, 100, 500);
+    chassis.turnToHeading(0, 550);
+    liftToPreset(4, false, 500, 127);
+    chassis.moveToPose(-15, 60 , 0, 2300, {.lead=0.002, .minSpeed=120}, false);
+    pros::delay(300);
+    clamp.set_value(LOW);
+    drivePID(-6, 100, 500);
+    liftToPreset(0, false, 500, 127);
+    chassis.turnToHeading(180, 550);
+    chassis.moveToPose(-6.5, 5, 180, 1800,{.lead=0.002, .minSpeed=120}, false);
+    chassis.moveToPose(-8, -10, 180, 1400,{.lead=0.002, .maxSpeed=90}, false);
+    clamp.set_value(HIGH);
+    pros::delay(250);
+    liftToPosition(5,200, 127);
+    drivePID(-12, 100, 1000);
+    liftToPreset(1, false, 500, 127);
+    chassis.turnToHeading(-90, 450);
+    drivePID(28, 100, 2000);
+    clamp.set_value(LOW);
 }
