@@ -23,6 +23,10 @@ extern void liftToPosition(double target, int timeoutMs = 2000, int maxSpeed = 1
 extern void liftToPreset(int preset, bool waitUntilDone = true, int timeoutMs = 2000, int maxSpeed = 127);
 
 
+// Driver control: raises the lift's hold point by this many encoder degrees,
+// the hold loop in handleLift() then moves the lift up to it
+extern void bumpLift(double amount);
+
 // Current lift height in encoder degrees, average of both lift motors
 extern double getLiftPosition();
 

@@ -5,42 +5,41 @@
 #include <vector>
 #include <functional>
 
-// Forward declaration of AutonRoutine structure
+// A route name, the function that runs it, and the int passed to it
+// Defined in auton_selector.cpp
 struct AutonRoutine;
 
-// Declaration of AutonSelector class
+// Holds a list of routes and which one is picked
+// Selections are numbered from 1, not 0
 class AutonSelector
 {
 private:
     std::vector<AutonRoutine> routines;
     int currentSelection;
-public:
-    // Constructor
-    AutonSelector(const AutonRoutine *routinesArray, size_t routineCount, bool combineTesting = false, const AutonRoutine *extraRoutinesArray = nullptr, size_t extraCount = 0);
-    
-    // Display methods
-    void displaySelectionBrain();
-    void displaySelectionController();
 
-    // Navigation methods
+public:
+    // Copies the routes in, and the extra ones too if combineTesting is true
+    AutonSelector(const AutonRoutine *routinesArray, size_t routineCount, bool combineTesting = false,
+                  const AutonRoutine *extraRoutinesArray = nullptr, size_t extraCount = 0);
+
+    // Show the alliance color and selected route on the brain screen
+    void displaySelectionBrain();
+
+    // Step through the list, wrapping around at either end
     void prevSelection();
     void nextSelection();
 
-    // Execution method
+    // Run the selected route
     void runSelection();
 
-    // Utility method
     int getRoutineCount() const;
 };
 
-// Extern declarations for global objects
-
 extern const AutonRoutine COMPETITION_ROUTINES[];
-extern const AutonRoutine TESTING_ROUTINES[];
 extern AutonSelector competitionSelector;
-extern AutonSelector testingSelector;
 
-// Function declarations
+// Alliance color, true = red, toggled with the brain's center button
+// The brain's left/right buttons step through the routes
 extern bool red;
 
 #endif // AUTON_SELECTOR_H
