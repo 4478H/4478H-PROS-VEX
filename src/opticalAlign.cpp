@@ -1,38 +1,49 @@
-#include "devices.h"
 #include "opticalAlign.h"
-#include "pros/distance.hpp"
+#include "devices.h"
 #include "movement.h"
-#include "pros/imu.hpp"
+#include <algorithm>
 #include <cmath>
-using namespace pros;
 
-// All distances in mm, angles in degrees
-const double minGoalDist = 50.0;     // Min valid goal distance
-const double maxGoalDist = 400.0;    // Max valid goal distance
-const double turnSpd = 10.0;          // Normal turn speed
-const double backupSpd = 50.0;        // Speed for backing into goal
-const double alignTolerance = 4.0;    // Max heading error allowed
-const double maxscanAngle = 30.0;     // How far to scan each way
-const double scanStartAngle = 290.0;  // Left scan limit
-const double scanEndAngle = 360.0;    // Right scan limit
-const double extraTurnAngle = 0.5;    // Small extra turn for centering
+// Distances in mm, angles in degrees, speeds out of 127
 
-bool detectsGoal() {
+// Object size range the distance sensor reports for a goal
+// Smaller is noise, bigger is a wall
+const int MIN_GOAL_SIZE = 45;
+const int MAX_GOAL_SIZE = 90;
+
+const int SCAN_SPEED = 28;             // max speed while sweeping for the goal
+const double BACKUP_SPEED = 50.0;      // speed for backing into the goal
+const double BACKUP_SLOW_SPEED = 30.0; // speed once the backup slows down
+const double HEADING_KP = 1.5;         // how hard to steer back onto the goal heading
+const double MAX_CORRECTION = 30;      // cap on that steering power
+const int LOST_FRAMES_LIMIT = 5;       // frames without seeing the goal before trying to find it again
+
+// One side's numbers, the two long goals only differ in these
+struct GoalSide {
+    double scanStart;   // heading to start the sweep at
+    double scanEnd;     // heading to sweep toward
+    double backupTime;  // max time to back up, in ms
+    double slowAfter;   // ms into the backup to slow down
+};
+const GoalSide NEAR_SIDE = {290.0, 360.0, 1300, 600};
+const GoalSide FAR_SIDE  = {70.0, 150.0, 900, 650};
+
+static bool detectsGoal() {
     int objSize = backDistance.get_object_size();
-    const int minMediumSize = 45;     // Filter out small objects/noise
-    const int maxMediumSize = 90;    // Filter out large objects/walls
-    return (objSize >= minMediumSize && objSize <= maxMediumSize);
+    return (objSize >= MIN_GOAL_SIZE && objSize <= MAX_GOAL_SIZE);
 }
 
-bool scanForGoal(double& targetHeading) {
-    // Sweep from left to right looking for goal
-    double startHeading = scanStartAngle;
-    double endHeading = scanEndAngle;
-    bool goalFound = false;
+static void stopDrive() {
+    left_motors.brake();
+    right_motors.brake();
+}
 
-    // Turn to start then begin async scan to end
-    turnToHeadingSmart(startHeading, 500, {.minSpeed = 100});
-    turnToHeadingSmart(endHeading, 1000, {.maxSpeed = 28});
+// Sweep from scanStart to scanEnd until the goal is seen
+// Returns true and sets targetHeading to where it was seen, or false if it never was
+static bool scanForGoal(const GoalSide& side, double& targetHeading) {
+    // Snap to the start, then sweep slowly in the background while we watch the sensor
+    turnToHeadingSmart(side.scanStart, 500, {.minSpeed = 100});
+    turnToHeadingSmart(side.scanEnd, 1000, {.maxSpeed = SCAN_SPEED});
 
     while (chassis.isInMotion()) {
         double dist = backDistance.get();
@@ -45,14 +56,12 @@ bool scanForGoal(double& targetHeading) {
         pros::lcd::clear_line(1);
         pros::lcd::print(1, "Size: %d  Dist: %.0fmm", objSize, dist);
         pros::lcd::clear_line(2);
-        pros::lcd::print(2, "Heading: %.1f -> %.1f", currHeading, endHeading);
+        pros::lcd::print(2, "Heading: %.1f -> %.1f", currHeading, side.scanEnd);
 
         if (isDetected) {
             chassis.cancelAllMotions();
             targetHeading = currHeading;
-            goalFound = true;
-            left_motors.brake();
-            right_motors.brake();
+            stopDrive();
             pros::delay(150);
             return true;
         }
@@ -60,214 +69,74 @@ bool scanForGoal(double& targetHeading) {
         pros::delay(20);
     }
 
-    left_motors.brake();
-    right_motors.brake();
-    return goalFound;
+    stopDrive();
+    return false;
 }
 
-void backIntoGoal(double targetHeading) {
-    const double backupTimeout = 1300;    // Max time for backup attempt
+// Back up into the goal, steering to hold targetHeading
+// If the goal is lost for a few frames, pull forward and scan again
+static void backIntoGoal(const GoalSide& side, double targetHeading) {
     double startTime = pros::millis();
-    int lostObjCount = 0;                 // Count frames where goal isn't seen
-    const int lostObjThreshold = 5;       // Try recovery after this many lost frames
-    
-    while (pros::millis() - startTime < backupTimeout) {
-        int objDetected = backDistance.get_object_size();
-        
-        if (objDetected == 0) {
-            lostObjCount++;
-            
-            if (lostObjCount >= lostObjThreshold) {
-                // Lost goal - stop and try recovery
-                left_motors.brake();
-                right_motors.brake();
+    int lostFrames = 0;
+
+    while (pros::millis() - startTime < side.backupTime) {
+        if (backDistance.get_object_size() == 0) {
+            lostFrames++;
+
+            if (lostFrames >= LOST_FRAMES_LIMIT) {
+                // Lost the goal, stop and pull forward to get a better view
+                stopDrive();
                 pros::delay(100);
-                
-                // Drive forward briefly to get better view
                 left_motors.move(70);
                 right_motors.move(70);
                 pros::delay(300);
-                left_motors.brake();
-                right_motors.brake();
+                stopDrive();
                 pros::delay(100);
-                
-                if (scanForGoal(targetHeading)) {
+
+                if (scanForGoal(side, targetHeading)) {
+                    // Found it again, restart the backup
                     startTime = pros::millis();
-                    lostObjCount = 0;
+                    lostFrames = 0;
                     continue;
-                } else {
-                    return;
                 }
+                return;
             }
         } else {
-            lostObjCount = 0;
+            lostFrames = 0;
         }
-        
-        double currHeading = imu.get_heading();
-        double headingErr = targetHeading - currHeading;
-        
-        // Normalize heading error to [-180, 180]
+
+        // Heading error, the short way around (-180 to 180)
+        double headingErr = targetHeading - imu.get_heading();
         while (headingErr > 180) headingErr -= 360;
         while (headingErr < -180) headingErr += 360;
-        
-        // Simple proportional correction (1.5 = P gain)
-        double correction = headingErr * 1.5;
-         
-        // Limit correction power
-        if (correction > 30) correction = 30;
-        if (correction < -30) correction = -30;
-        
-        // Slow down to 30 after 1 second has elapsed
-        double elapsedTime = pros::millis() - startTime;
-        double currentSpeed = (elapsedTime >= 600) ? 30.0 : backupSpd;
-        
-        // Apply correction differentially
-        double leftPwr = -currentSpeed + correction;
-        double rightPwr = -currentSpeed - correction;
-        
-        left_motors.move(leftPwr);
-        right_motors.move(rightPwr);
- 
-        
+
+        double correction = std::clamp(headingErr * HEADING_KP, -MAX_CORRECTION, MAX_CORRECTION);
+
+        double elapsed = pros::millis() - startTime;
+        double speed = (elapsed >= side.slowAfter) ? BACKUP_SLOW_SPEED : BACKUP_SPEED;
+
+        // Driving backwards, so the correction is added to the left and taken from the right
+        left_motors.move(-speed + correction);
+        right_motors.move(-speed - correction);
+
         pros::delay(20);
     }
-    
-    left_motors.brake();
-    right_motors.brake();
+
+    stopDrive();
+}
+
+static void alignToGoal(const GoalSide& side, double targetHeading) {
+    if (scanForGoal(side, targetHeading)) {
+        backIntoGoal(side, targetHeading);
+    } else {
+        stopDrive();
+    }
 }
 
 void alignToLongGoal() {
-    double targetHeading = 0;
-    // Try to find goal, if found back into it
-    if (scanForGoal(targetHeading)) {
-        backIntoGoal(targetHeading);
-    } else {
-        // No goal found - stop safely
-        left_motors.brake();
-        right_motors.brake();
-    }
-}
-
-bool scanForGoalOpposite(double& targetHeading) {
-    // Sweep from left to right looking for goal (opposite side - centered around 180)
-    double startHeading = 70.0;  // Left scan limit (180 - 35)
-    double endHeading = 150;     // Right scan limit (180 + 35)
-    bool goalFound = false;
-
-    // Turn to start then begin async scan to end
-    turnToHeadingSmart(startHeading, 500, {.minSpeed = 100});
-    turnToHeadingSmart(endHeading, 1000, {.maxSpeed = 28});
-
-    while (chassis.isInMotion()) {
-        double dist = backDistance.get();
-        int objSize = backDistance.get_object_size();
-        double currHeading = imu.get_heading();
-        bool isDetected = detectsGoal();
-
-        pros::lcd::clear_line(0);
-        pros::lcd::print(0, "Detected: %s", isDetected ? "YES" : "NO");
-        pros::lcd::clear_line(1);
-        pros::lcd::print(1, "Size: %d  Dist: %.0fmm", objSize, dist);
-        pros::lcd::clear_line(2);
-        pros::lcd::print(2, "Heading: %.1f -> %.1f", currHeading, endHeading);
-
-        if (isDetected) {
-            chassis.cancelAllMotions();
-            targetHeading = currHeading;
-            goalFound = true;
-            left_motors.brake();
-            right_motors.brake();
-            pros::delay(150);
-            return true;
-        }
-
-        pros::delay(20);
-    }
-
-    left_motors.brake();
-    right_motors.brake();
-    return goalFound;
-}
-
-void backIntoGoalOpposite(double targetHeading) {
-    const double backupTimeout = 900;    // Max time for backup attempt
-    double startTime = pros::millis();
-    int lostObjCount = 0;                 // Count frames where goal isn't seen
-    const int lostObjThreshold = 5;       // Try recovery after this many lost frames
-    
-    while (pros::millis() - startTime < backupTimeout) {
-        int objDetected = backDistance.get_object_size();
-        
-        if (objDetected == 0) {
-            lostObjCount++;
-            
-            if (lostObjCount >= lostObjThreshold) {
-                // Lost goal - stop and try recovery
-                left_motors.brake();
-                right_motors.brake();
-                pros::delay(100);
-                
-                // Drive forward briefly to get better view
-                left_motors.move(70);
-                right_motors.move(70);
-                pros::delay(300);
-                left_motors.brake();
-                right_motors.brake();
-                pros::delay(100);
-                
-                if (scanForGoalOpposite(targetHeading)) {
-                    startTime = pros::millis();
-                    lostObjCount = 0;
-                    continue;
-                } else {
-                    return;
-                }
-            }
-        } else {
-            lostObjCount = 0;
-        }
-        
-        double currHeading = imu.get_heading();
-        double headingErr = targetHeading - currHeading;
-        
-        // Normalize heading error to [-180, 180]
-        while (headingErr > 180) headingErr -= 360;
-        while (headingErr < -180) headingErr += 360;
-        
-        // Simple proportional correction (1.5 = P gain)
-        double correction = headingErr * 1.5;
-         
-        // Limit correction power
-        if (correction > 30) correction = 30;
-        if (correction < -30) correction = -30;
-        
-        // Slow down to 30 after 1 second has elapsed
-        double elapsedTime = pros::millis() - startTime;
-        double currentSpeed = (elapsedTime >= 650) ? 30.0 : backupSpd;
-        
-        // Apply correction differentially
-        double leftPwr = -currentSpeed + correction;
-        double rightPwr = -currentSpeed - correction;
-        
-        left_motors.move(leftPwr);
-        right_motors.move(rightPwr);
- 
-        
-        pros::delay(20);
-    }
-    
-    left_motors.brake();
-    right_motors.brake();
+    alignToGoal(NEAR_SIDE, 0);
 }
 
 void alignToLongGoalOpposite() {
-    double targetHeading = 180.0;  // Default target heading for opposite side
-    // Try to find goal, if found back into it
-    if (scanForGoalOpposite(targetHeading)) {
-        backIntoGoalOpposite(targetHeading);
-    } else {
-        // No goal found - stop safely
-        left_motors.brake();
-        right_motors.brake();
-    }
+    alignToGoal(FAR_SIDE, 180.0);
 }

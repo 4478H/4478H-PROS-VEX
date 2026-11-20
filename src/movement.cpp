@@ -1,34 +1,30 @@
-#include "main.h"
-#include "api.h"
-#include "pros/adi.h"
-#include "pros/motors.hpp"
-#include "lemlib/api.hpp" // IWYU pragma: keep
-#include "lemlib/chassis/chassis.hpp"
-#include "devices.h"
-#include "auton_routes.h"
 #include "movement.h"
+#include "devices.h"
 #include "liftControl.h"
-#include <string>
-#include <iostream>
-#include <thread>
+#include "auton_selector.h"
 #include <algorithm>
 #include <atomic>
-#include <memory>
-#include "pros/rtos.hpp"
+#include <cmath>
 
+// ---------------- Intake ----------------
 
 void Intake(double direction)
 {
     bottomStage.move(direction * 127);
     topStage.move(direction * 127);
 }
-void scoreMid(){
+
+void scoreMid()
+{
     bottomStage.move(127);
     topStage.move(-80);
 }
-void load(){
+
+void load()
+{
     bottomStage.move(80);
 }
+
 void stopIntake()
 {
     bottomStage.set_brake_mode(MOTOR_BRAKE_HOLD);
@@ -36,28 +32,29 @@ void stopIntake()
     bottomStage.brake();
     topStage.brake();
 }
+
 void outake(int time)
 {
-    bottomStage.move(-127);//intake out then in
+    bottomStage.move(-127);
     topStage.move(-80);
-
     pros::delay(time);
-
 }
+
 void outakeSkills(int time)
 {
-    bottomStage.move(-50);//intake out then in
-    topStage .move(-10);
-
+    bottomStage.move(-50);
+    topStage.move(-10);
     pros::delay(time);
-
 }
-void scoreMidSkills(){
+
+void scoreMidSkills()
+{
     bottomStage.set_brake_mode(MOTOR_BRAKE_HOLD);
     topStage.set_brake_mode(MOTOR_BRAKE_HOLD);
     bottomStage.move(100);
     topStage.move(-30);
 }
+
 // Improved slew rate limiting for smoother control
 double slewStep = 30.0;  // Increased for better responsiveness
 double slewRate = 0.5; // Maximum change per iteration (15% of difference)
@@ -244,53 +241,83 @@ void drivePID(double fwdVal, double maxSpeedPercent, double timeout)
     left_motors.brake();
     right_motors.brake();
 }
+
+// True while a drivePIDAsync move is running in the background
+std::atomic<bool> driveRunning(false);
+
+void waitForDrive()
+{
+    while (driveRunning)
+    {
+        pros::delay(10);
+    }
+}
+
+void drivePIDAsync(double fwdVal, double maxSpeedPercent, double timeout, bool waitUntilDone)
+{
+    // Don't let two drive loops fight over the motors,
+    // finish the last background drive before starting a new one
+    waitForDrive();
+
+    if (waitUntilDone)
+    {
+        drivePID(fwdVal, maxSpeedPercent, timeout);
+    }
+    else
+    {
+        // run the drive in its own task so the next lines of the route start right away
+        driveRunning = true;
+        pros::Task([fwdVal, maxSpeedPercent, timeout]() {
+            drivePID(fwdVal, maxSpeedPercent, timeout);
+            driveRunning = false;
+        });
+    }
+}
+
+// ---------------- Turning ----------------
+
 void turnToHeadingSmart(float theta, int timeout, TurnToHeadingParams params, bool async)
 {
-    // Get current heading
-    float currentHeading = chassis.getPose().theta;
-    
-    // Calculate angle difference
-    float angleDiff = theta - currentHeading;
-    
-    // Normalize to [-180, 180]
+    // How far we have to turn, the short way around (-180 to 180)
+    float angleDiff = theta - chassis.getPose().theta;
     while (angleDiff > 180) angleDiff -= 360;
     while (angleDiff < -180) angleDiff += 360;
-    
-    // For small turns, automatically apply minSpeed if not already set
-    // This ensures the robot has enough power to overcome friction and motor deadband
+
+    // Small turns need a minimum speed to get past friction,
+    // only applied if the caller didn't set one
     if (params.minSpeed == 0)
     {
         float absAngleDiff = fabs(angleDiff);
-        
-        // Very small turns (< 15 degrees) need higher minSpeed to overcome friction
+
         if (absAngleDiff < 15.0)
         {
-            params.minSpeed = 40; // Higher minimum speed for very small turns
-            params.earlyExitRange = 2; // Tighter exit range for precision
+            params.minSpeed = 40;
+            params.earlyExitRange = 2;
         }
-        // Small to medium turns (15-30 degrees) need moderate minSpeed
         else if (absAngleDiff < 30.0)
         {
-            params.minSpeed = 30; // Moderate minimum speed
+            params.minSpeed = 30;
             params.earlyExitRange = 3;
         }
     }
-    
-    // Call the actual turnToHeading function with async parameter
+
     chassis.turnToHeading(theta, timeout, params, async);
 }
 
 // ---------------- Override helpers ----------------
-extern bool red; // Declared in auton_selector.cpp
 
 // Clamp is open when HIGH and closed when LOW
 // TUNE: how long the piston needs to fully open or close
 const int CLAMP_DELAY = 150;
-void grabPin(){
+
+void grabPin()
+{
     clamp.set_value(LOW);
     pros::delay(CLAMP_DELAY);
 }
-void releasePin(){
+
+void releasePin()
+{
     clamp.set_value(HIGH);
     pros::delay(CLAMP_DELAY);
 }
@@ -302,9 +329,10 @@ const int TOGGLE_PRESSES_BLUE = 1;
 
 // Back the roller into the Toggle to set it to our Alliance color,
 // then pull away since a Toggle only counts when no Robot is touching it
-void setToggle(double backupDist){
+void setToggle(double backupDist)
+{
     int presses = red ? TOGGLE_PRESSES_RED : TOGGLE_PRESSES_BLUE;
-    for(int p = 0; p < presses; p++){
+    for (int p = 0; p < presses; p++) {
         drivePID(-backupDist, 40, 1000);
         pros::delay(150);
         drivePID(backupDist, 100, 1000);
@@ -313,13 +341,14 @@ void setToggle(double backupDist){
 
 // Raise the lift to a preset, drive the Pin over the Goal, drop it,
 // back away, then lower the lift
-void placePin(int preset, double approachDist){
+void placePin(int preset, double approachDist)
+{
     liftToPreset(preset, true, 1500, 127);
     Lift.set_brake_mode_all(E_MOTOR_BRAKE_HOLD);
     Lift.brake();
     drivePID(approachDist, 60, 1500);
     releasePin();
     drivePID(-approachDist, 100, 1500);
-    // lower in the background so the robot can head to the next target right away
+    // Lower in the background so the robot can head to the next target right away
     liftToPreset(0, false, 1500, 127);
 }

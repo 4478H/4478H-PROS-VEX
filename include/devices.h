@@ -1,49 +1,50 @@
 #pragma once
 
-// required files for devices
+// Every motor, sensor, and piston on the robot, plus the LemLib chassis setup
+// Ports and settings live in devices.cpp
+
 #include "main.h"
-#include "api.h"
 #include "lemlib/api.hpp" // IWYU pragma: keep
 #include "lemlib/chassis/chassis.hpp"
-#include <string>
-#include <iostream>
-#include <cstdio>
-#include <chrono>
-#include <numeric>
 
-// namespace for declarations
 using namespace pros;
 using namespace lemlib;
 
-
-
 extern Controller controller;
-// Motor Declerations
+
+// ---------------- Motors ----------------
+// Drivetrain
 extern MotorGroup left_motors;
 extern MotorGroup right_motors;
 extern MotorGroup all_motors;
-extern Motor bottomStage;
-extern Motor topStage;
-extern Motor liftLeft;
-extern Motor liftRight;
-extern MotorGroup Lift;
-extern MotorGroup intake;
 extern Motor mBackLeft;
 extern Motor mMidLeft;
 extern Motor mBackRight;
 extern Motor mMidRight;
-// Sensor Declerations
+// Lift
+extern Motor liftLeft;
+extern Motor liftRight;
+extern MotorGroup Lift;
+// Intake
+extern Motor bottomStage;
+extern Motor topStage;
+extern MotorGroup intake;
+// Toggle
+extern Motor toggleMotor;
+
+// ---------------- Sensors ----------------
 extern Imu imu;
 extern Distance backDistance;
-extern Distance* backDistancePtr;
 extern Optical colorSens;
-// Phnematic Declerations
-extern adi::Port hood;
-extern adi::Port clamp;
+// extern adi::DigitalIn autonLimitSwitch; // press to cycle through auton routes
+
+// ---------------- Pneumatics ----------------
+extern adi::Port toggle; // took over the hood's port (B)
+extern adi::Port clamp; // HIGH = open, LOW = closed
 extern adi::Port wing;
 extern adi::Port midDescore;
-extern adi::DigitalIn autonLimitSwitch;
 
+// ---------------- LemLib ----------------
 extern lemlib::TrackingWheel left_tracking_wheel;
 extern lemlib::TrackingWheel right_tracking_wheel;
 extern pros::Rotation horizontal_rotation;
